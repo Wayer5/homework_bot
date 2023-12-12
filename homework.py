@@ -67,8 +67,7 @@ def get_api_answer(timestamp):
         homework_statuses.raise_for_status()
         if homework_statuses.status_code != HTTPStatus.OK:
             raise requests.exceptions.HTTPError(
-                f"Ошибка при запросе: {homework_statuses.status_code}"
-                )
+                f"Ошибка при запросе: {homework_statuses.status_code}")
     except requests.exceptions.HTTPError as e:
         logger.error(f"Ошибка при запросе: {e.response.status_code}")
         return {}
