@@ -55,7 +55,7 @@ def check_tokens():
         logger.critical(
             f"Отсутствуют обязательные \
             переменные окружения: {', '.join(missing_tokens)}"
-            )
+        )
         return False
 
     return True
