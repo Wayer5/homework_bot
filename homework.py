@@ -7,7 +7,7 @@ import time
 from dotenv import load_dotenv
 import requests
 import telegram
-from telegram.ext import Updater
+
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -22,7 +22,7 @@ load_dotenv()
 
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', 'Token does not exist')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
@@ -34,9 +34,6 @@ HOMEWORK_VERDICTS = {
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
-
-updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-timestamp = int(time.time())
 
 
 class ApiAnswerError(Exception):
@@ -53,8 +50,8 @@ def check_tokens():
 
     if missing_tokens:
         logger.critical(
-            f"Отсутствуют обязательные \
-            переменные окружения: {', '.join(missing_tokens)}"
+            f"Отсутствуют обязательные"
+            f"переменные окружения: {', '.join(missing_tokens)}"
         )
         return False
 
@@ -78,18 +75,18 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params={'from_date': timestamp}
         )
-        response.raise_for_status()  # Проверка на ошибки HTTP
+        response.raise_for_status()
 
-        if response.status_code != HTTPStatus.OK:
-            logger.error(
-                f'Статус API отличный от ожидаемого: {response.status_code}'
-            )
-            raise ApiAnswerError('API не отвечает')
-
-        return response.json()
     except requests.RequestException as error:
         logger.error(f'Ошибка при запросе к основному API: {error}')
         raise ApiAnswerError('Ошибка при запросе к API')
+
+    if response.status_code != HTTPStatus.OK:
+        logger.error(
+            f'Статус API отличный от ожидаемого: {response.status_code}'
+        )
+        raise ApiAnswerError('API не отвечает')
+    return response.json()
 
 
 def check_response(response):
@@ -126,16 +123,24 @@ def main():
     if not check_tokens():
         logger.critical('Отсутствует обязательная переменная окружения')
         return
+
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
+    last_message = None
+
     while True:
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
             timestamp = response.get('current_date', timestamp)
+
             if homeworks:
                 message = parse_status(homeworks[0])
-                send_message(bot, message)
+
+                # Проверка на совпадение с последним отправленным сообщением
+                if message != last_message:
+                    send_message(bot, message)
+                    last_message = message
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
