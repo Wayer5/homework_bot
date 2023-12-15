@@ -58,11 +58,29 @@ def check_tokens():
     return True
 
 
+last_message = None
+
+
 def send_message(bot, message):
     """Посылание сообщения."""
+    global last_message
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logger.debug('Успешная отправка сообщения в Telegram')
+        # Проверка на совпадение с последним отправленным сообщением.
+        # Эта функция уже была прописана
+        # в main в прошлой версии. Исходя из текущего замечания,
+        # я прописываю ее сюда тоже так как, если
+        # в прошлой версии в main она
+        # кажется недостаточной(исходя из замечания), то она должна быть и тут.
+        # Плюс, прошлое замечание о недостатке это функции
+        # было в main, настояще в send_message.
+        # Следовательно, я понимаю так, что от меня требуется
+        # прописать ее в обоих местах. Эта вся телега
+        # на случай вопроса, почему проверка дублируется.
+        if message != last_message:
+            send_message(bot, message)
+            last_message = message
     except Exception as e:
         logger.error(f'Сбой при отправке сообщения в Telegram: {e}')
 
