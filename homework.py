@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import requests
 import telegram
 
+from errors import ApiAnswerError
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -36,10 +37,6 @@ HOMEWORK_VERDICTS = {
 }
 
 
-class ApiAnswerError(Exception):
-    """Ошибка при обращению к API."""
-
-
 def check_tokens():
     """Проверка токенов."""
     missing_tokens = [token_name for token_name, token_value in {
@@ -50,7 +47,7 @@ def check_tokens():
 
     if missing_tokens:
         logger.critical(
-            f"Отсутствуют обязательные"
+            "Отсутствуют обязательные "
             f"переменные окружения: {', '.join(missing_tokens)}"
         )
         return False
@@ -67,20 +64,6 @@ def send_message(bot, message):
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logger.debug('Успешная отправка сообщения в Telegram')
-        # Проверка на совпадение с последним отправленным сообщением.
-        # Эта функция уже была прописана
-        # в main в прошлой версии. Исходя из текущего замечания,
-        # я прописываю ее сюда тоже так как, если
-        # в прошлой версии в main она
-        # кажется недостаточной(исходя из замечания), то она должна быть и тут.
-        # Плюс, прошлое замечание о недостатке это функции
-        # было в main, настояще в send_message.
-        # Следовательно, я понимаю так, что от меня требуется
-        # прописать ее в обоих местах. Эта вся телега
-        # на случай вопроса, почему проверка дублируется.
-        if message != last_message:
-            send_message(bot, message)
-            last_message = message
     except Exception as e:
         logger.error(f'Сбой при отправке сообщения в Telegram: {e}')
 
@@ -162,7 +145,9 @@ def main():
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            if message != last_message:
+                send_message(bot, message)
+                last_message = message
             logger.error(message)
         finally:
             time.sleep(RETRY_PERIOD)
