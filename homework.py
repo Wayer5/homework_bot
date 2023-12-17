@@ -60,12 +60,13 @@ last_message = None
 
 def send_message(bot, message):
     """Посылание сообщения."""
-    global last_message
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logger.debug('Успешная отправка сообщения в Telegram')
+        return True
     except Exception as e:
         logger.error(f'Сбой при отправке сообщения в Telegram: {e}')
+        return False
 
 
 def get_api_answer(timestamp):
@@ -127,7 +128,7 @@ def main():
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    last_message = None
+    global last_message
 
     while True:
         try:
@@ -140,13 +141,12 @@ def main():
 
                 # Проверка на совпадение с последним отправленным сообщением
                 if message != last_message:
-                    send_message(bot, message)
-                    last_message = message
+                    if send_message(bot, message):
+                        last_message = message
 
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            if message != last_message:
-                send_message(bot, message)
+            if message != last_message and send_message(bot, message):
                 last_message = message
             logger.error(message)
         finally:
